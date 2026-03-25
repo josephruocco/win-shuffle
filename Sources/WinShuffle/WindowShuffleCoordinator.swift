@@ -204,15 +204,26 @@ final class WindowShuffleCoordinator: ObservableObject {
         intensity: Double,
         motion: ShuffleMotionProfile
     ) -> [CGPoint] {
-        let origins = frames.map(\.origin).shuffled()
+        let visible = clusterVisibleFrame(for: frames) ?? NSScreen.main?.visibleFrame ?? .zero
+        let center = CGPoint(x: visible.midX, y: visible.midY)
+        let baseRadius = min(visible.width, visible.height) * (0.12 + (0.06 * intensity))
+        let shuffledAngles = Array(0..<frames.count).shuffled().map { index in
+            let ratio = Double(index) / Double(max(frames.count, 1))
+            return (ratio * .pi * 2) - (.pi / 2)
+        }
 
         return frames.enumerated().map { index, frame in
-            let candidate = origins[index]
-            let spreadX = CGFloat((index % 5) - 2) * (motion.targetScatter.width * intensity)
-            let spreadY = CGFloat(index % 4) * (motion.targetScatter.height * intensity)
+            let angle = shuffledAngles[index]
+            let ring = baseRadius + CGFloat(index % 3) * (18 * intensity)
+            let candidate = CGPoint(
+                x: center.x + (cos(angle) * ring),
+                y: center.y + (sin(angle) * ring)
+            )
+            let spreadX = CGFloat((index % 5) - 2) * (motion.targetScatter.width * intensity * 0.45)
+            let spreadY = CGFloat((index % 4) - 1) * (motion.targetScatter.height * intensity * 0.35)
             return clampedOrigin(
                 frame: frame,
-                screenFrame: visibleScreenFrame(for: frame) ?? NSScreen.main?.visibleFrame ?? .zero,
+                screenFrame: visible,
                 proposed: CGPoint(x: candidate.x + spreadX, y: candidate.y + spreadY)
             )
         }
@@ -223,12 +234,13 @@ final class WindowShuffleCoordinator: ObservableObject {
         intensity: Double,
         motion: ShuffleMotionProfile
     ) -> [CGPoint] {
+        let visible = clusterVisibleFrame(for: frames) ?? NSScreen.main?.visibleFrame ?? .zero
+        let deckCenter = CGPoint(
+            x: visible.midX + (motion.deckOffset.x * intensity * 0.55),
+            y: visible.midY + (motion.deckOffset.y * intensity * 0.55)
+        )
+
         return frames.enumerated().map { index, frame in
-            let visible = visibleScreenFrame(for: frame) ?? NSScreen.main?.visibleFrame ?? .zero
-            let deckCenter = CGPoint(
-                x: visible.midX + (motion.deckOffset.x * intensity),
-                y: visible.midY + (motion.deckOffset.y * intensity)
-            )
             let fanX = CGFloat(index) * (motion.fanStep.width * intensity)
             let fanY = CGFloat(index % 2 == 0 ? -index : index) * (motion.fanStep.height * intensity)
             return clampedOrigin(
@@ -263,6 +275,31 @@ final class WindowShuffleCoordinator: ObservableObject {
 
     private func visibleScreenFrame(for frame: CGRect) -> CGRect? {
         NSScreen.screens.first(where: { $0.visibleFrame.intersects(frame) })?.visibleFrame
+    }
+
+    private func clusterVisibleFrame(for frames: [CGRect]) -> CGRect? {
+        let matchedFrames = frames.compactMap { visibleScreenFrame(for: $0) }
+        guard !matchedFrames.isEmpty else {
+            return nil
+        }
+
+        var bestFrame = matchedFrames[0]
+        var bestCount = 0
+
+        for candidate in matchedFrames {
+            let count = matchedFrames.reduce(into: 0) { partialResult, frame in
+                if frame.equalTo(candidate) {
+                    partialResult += 1
+                }
+            }
+
+            if count > bestCount {
+                bestCount = count
+                bestFrame = candidate
+            }
+        }
+
+        return bestFrame
     }
 
     private func cubicEaseInOut(_ t: Double) -> Double {
