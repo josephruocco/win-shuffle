@@ -114,6 +114,15 @@ extension AccessibilityWindow {
         AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, value)
     }
 
+    static func setSize(_ size: CGSize, for element: AXUIElement) {
+        var mutableSize = size
+        guard let value = AXValueCreate(.cgSize, &mutableSize) else {
+            return
+        }
+
+        AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, value)
+    }
+
     static func raise(_ element: AXUIElement) {
         AXUIElementPerformAction(element, kAXRaiseAction as CFString)
     }

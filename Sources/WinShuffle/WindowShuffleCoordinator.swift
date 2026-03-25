@@ -11,6 +11,7 @@ final class WindowShuffleCoordinator: ObservableObject {
 
     private let animationDuration: Double = 1.8
     private let frameCount = 60
+    private let resizeFrameCount = 22
     private let settings: ShuffleSettings
     private var refreshTimer: Timer?
     private var workspaceObservers: [NSObjectProtocol] = []
@@ -106,13 +107,14 @@ final class WindowShuffleCoordinator: ObservableObject {
         let windows = windows
         let sourceFrames = windows.map(\.frame)
         let motion = settings.selectedPreset.motion
+        let normalizedFrames = makeNormalizedFrames(for: windows)
         let targetOrigins = makeShuffledOrigins(
-            for: windows,
+            for: normalizedFrames,
             intensity: settings.intensityScale,
             motion: motion
         )
         let deckAnchors = makeDeckAnchors(
-            for: windows,
+            for: normalizedFrames,
             intensity: settings.intensityScale,
             motion: motion
         )
@@ -124,13 +126,37 @@ final class WindowShuffleCoordinator: ObservableObject {
                 refreshWindows()
             }
 
-            status = "Shuffling \(windows.count) windows."
             windows.enumerated().forEach { index, window in
                 AccessibilityWindow.raise(window.element)
                 if index < windows.count - 1 {
                     _ = AXUIElementSetMessagingTimeout(window.element, 0.05)
                 }
             }
+
+            status = "Normalizing window sizes."
+            for frameIndex in 0...resizeFrameCount {
+                let t = Double(frameIndex) / Double(resizeFrameCount)
+                let eased = cubicEaseInOut(t)
+
+                for (index, window) in windows.enumerated() {
+                    let normalized = normalizedFrames[index]
+                    let size = CGSize(
+                        width: sourceFrames[index].width + ((normalized.width - sourceFrames[index].width) * eased),
+                        height: sourceFrames[index].height + ((normalized.height - sourceFrames[index].height) * eased)
+                    )
+                    let origin = CGPoint(
+                        x: sourceFrames[index].origin.x + ((normalized.origin.x - sourceFrames[index].origin.x) * eased),
+                        y: sourceFrames[index].origin.y + ((normalized.origin.y - sourceFrames[index].origin.y) * eased)
+                    )
+
+                    AccessibilityWindow.setSize(size, for: window.element)
+                    AccessibilityWindow.setPosition(origin, for: window.element)
+                }
+
+                try? await Task.sleep(for: .seconds((duration * 0.28) / Double(resizeFrameCount)))
+            }
+
+            status = "Shuffling \(windows.count) windows."
 
             for frameIndex in 0...frameCount {
                 let t = Double(frameIndex) / Double(frameCount)
@@ -140,16 +166,17 @@ final class WindowShuffleCoordinator: ObservableObject {
                     let origin = animatedOrigin(
                         at: phase,
                         index: index,
-                        start: sourceFrames[index].origin,
+                        start: normalizedFrames[index].origin,
                         deckAnchor: deckAnchors[index],
                         target: targetOrigins[index],
                         intensity: settings.intensityScale,
                         motion: motion
                     )
+                    AccessibilityWindow.setSize(normalizedFrames[index].size, for: window.element)
                     AccessibilityWindow.setPosition(origin, for: window.element)
                 }
 
-                try? await Task.sleep(for: .seconds(duration / Double(frameCount)))
+                try? await Task.sleep(for: .seconds((duration * 0.72) / Double(frameCount)))
             }
 
             status = "Shuffle complete."
@@ -161,40 +188,52 @@ final class WindowShuffleCoordinator: ObservableObject {
         return AXIsProcessTrustedWithOptions(options)
     }
 
+    private func makeNormalizedFrames(for windows: [AccessibilityWindow]) -> [CGRect] {
+        windows.map { window in
+            let targetSize = preferredShuffleSize(for: window.screenFrame)
+            let origin = CGPoint(
+                x: min(max(window.frame.minX, window.screenFrame.minX), window.screenFrame.maxX - targetSize.width),
+                y: min(max(window.frame.minY, window.screenFrame.minY), window.screenFrame.maxY - targetSize.height)
+            )
+            return CGRect(origin: origin, size: targetSize)
+        }
+    }
+
     private func makeShuffledOrigins(
-        for windows: [AccessibilityWindow],
+        for frames: [CGRect],
         intensity: Double,
         motion: ShuffleMotionProfile
     ) -> [CGPoint] {
-        let origins = windows.map(\.frame.origin).shuffled()
+        let origins = frames.map(\.origin).shuffled()
 
-        return windows.enumerated().map { index, window in
+        return frames.enumerated().map { index, frame in
             let candidate = origins[index]
             let spreadX = CGFloat((index % 5) - 2) * (motion.targetScatter.width * intensity)
             let spreadY = CGFloat(index % 4) * (motion.targetScatter.height * intensity)
             return clampedOrigin(
-                for: window,
+                frame: frame,
+                screenFrame: visibleScreenFrame(for: frame) ?? NSScreen.main?.visibleFrame ?? .zero,
                 proposed: CGPoint(x: candidate.x + spreadX, y: candidate.y + spreadY)
             )
         }
     }
 
     private func makeDeckAnchors(
-        for windows: [AccessibilityWindow],
+        for frames: [CGRect],
         intensity: Double,
         motion: ShuffleMotionProfile
     ) -> [CGPoint] {
-        let visible = NSScreen.main?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? .zero
-        let deckCenter = CGPoint(
-            x: visible.midX + (motion.deckOffset.x * intensity),
-            y: visible.midY + (motion.deckOffset.y * intensity)
-        )
-
-        return windows.enumerated().map { index, window in
+        return frames.enumerated().map { index, frame in
+            let visible = visibleScreenFrame(for: frame) ?? NSScreen.main?.visibleFrame ?? .zero
+            let deckCenter = CGPoint(
+                x: visible.midX + (motion.deckOffset.x * intensity),
+                y: visible.midY + (motion.deckOffset.y * intensity)
+            )
             let fanX = CGFloat(index) * (motion.fanStep.width * intensity)
             let fanY = CGFloat(index % 2 == 0 ? -index : index) * (motion.fanStep.height * intensity)
             return clampedOrigin(
-                for: window,
+                frame: frame,
+                screenFrame: visible,
                 proposed: CGPoint(
                     x: deckCenter.x + fanX,
                     y: deckCenter.y + fanY
@@ -203,16 +242,27 @@ final class WindowShuffleCoordinator: ObservableObject {
         }
     }
 
-    private func clampedOrigin(for window: AccessibilityWindow, proposed: CGPoint) -> CGPoint {
-        let minX = window.screenFrame.minX
-        let maxX = window.screenFrame.maxX - window.frame.width
-        let minY = window.screenFrame.minY
-        let maxY = window.screenFrame.maxY - window.frame.height
+    private func clampedOrigin(frame: CGRect, screenFrame: CGRect, proposed: CGPoint) -> CGPoint {
+        let minX = screenFrame.minX
+        let maxX = screenFrame.maxX - frame.width
+        let minY = screenFrame.minY
+        let maxY = screenFrame.maxY - frame.height
 
         return CGPoint(
             x: min(max(proposed.x, minX), maxX),
             y: min(max(proposed.y, minY), maxY)
         )
+    }
+
+    private func preferredShuffleSize(for visibleFrame: CGRect) -> CGSize {
+        CGSize(
+            width: min(300, visibleFrame.width * 0.52),
+            height: min(285, visibleFrame.height * 0.56)
+        )
+    }
+
+    private func visibleScreenFrame(for frame: CGRect) -> CGRect? {
+        NSScreen.screens.first(where: { $0.visibleFrame.intersects(frame) })?.visibleFrame
     }
 
     private func cubicEaseInOut(_ t: Double) -> Double {
