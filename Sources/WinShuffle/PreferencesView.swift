@@ -5,6 +5,25 @@ struct PreferencesView: View {
 
     var body: some View {
         Form {
+            Section("Presets") {
+                Picker("Style", selection: $settings.selectedPresetID) {
+                    ForEach(settings.presets) { preset in
+                        Text(preset.name).tag(preset.id)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: settings.selectedPresetID) { _, presetID in
+                    guard let preset = settings.presets.first(where: { $0.id == presetID }) else {
+                        return
+                    }
+                    settings.applyPreset(preset)
+                }
+
+                Text(settings.selectedPreset.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Hotkey") {
                 Picker("Key", selection: $settings.hotKeyCode) {
                     ForEach(settings.hotKeyChoices) { choice in
