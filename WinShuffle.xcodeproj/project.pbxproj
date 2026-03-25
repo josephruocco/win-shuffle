@@ -13,7 +13,6 @@
 		A00000000000000000000013 /* WindowShuffleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000023 /* WindowShuffleCoordinator.swift */; };
 		A00000000000000000000014 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000024 /* PreferencesView.swift */; };
 		A00000000000000000000015 /* ShuffleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000025 /* ShuffleSettings.swift */; };
-		A00000000000000000000016 /* WindowPreviewOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000026 /* WindowPreviewOverlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,7 +24,6 @@
 		A00000000000000000000023 /* WindowShuffleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowShuffleCoordinator.swift; sourceTree = "<group>"; };
 		A00000000000000000000024 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		A00000000000000000000025 /* ShuffleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuffleSettings.swift; sourceTree = "<group>"; };
-		A00000000000000000000026 /* WindowPreviewOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPreviewOverlay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,7 +62,6 @@
 				A00000000000000000000024 /* PreferencesView.swift */,
 				A00000000000000000000025 /* ShuffleSettings.swift */,
 				A00000000000000000000022 /* WinShuffleApp.swift */,
-				A00000000000000000000026 /* WindowPreviewOverlay.swift */,
 				A00000000000000000000023 /* WindowShuffleCoordinator.swift */,
 			);
 			path = Sources/WinShuffle;
@@ -156,7 +153,6 @@
 				A00000000000000000000014 /* PreferencesView.swift in Sources */,
 				A00000000000000000000015 /* ShuffleSettings.swift in Sources */,
 				A00000000000000000000012 /* WinShuffleApp.swift in Sources */,
-				A00000000000000000000016 /* WindowPreviewOverlay.swift in Sources */,
 				A00000000000000000000013 /* WindowShuffleCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

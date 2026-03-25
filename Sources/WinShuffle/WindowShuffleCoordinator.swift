@@ -12,7 +12,6 @@ final class WindowShuffleCoordinator: ObservableObject {
     private let animationDuration: Double = 1.8
     private let frameCount = 60
     private let settings: ShuffleSettings
-    private let overlayAnimator = WindowPreviewOverlayAnimator()
     private var refreshTimer: Timer?
     private var workspaceObservers: [NSObjectProtocol] = []
 
@@ -115,15 +114,6 @@ final class WindowShuffleCoordinator: ObservableObject {
                 isAnimating = false
                 refreshWindows()
             }
-
-            status = "Previewing shuffle."
-            await overlayAnimator.preview(
-                windows: windows,
-                sourceFrames: sourceFrames,
-                deckAnchors: deckAnchors,
-                intensity: settings.intensityScale,
-                duration: duration
-            )
 
             status = "Shuffling \(windows.count) windows."
             windows.enumerated().forEach { index, window in

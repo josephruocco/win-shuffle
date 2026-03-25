@@ -7,7 +7,6 @@ struct AccessibilityWindow: Identifiable {
     let appName: String
     let title: String
     let element: AXUIElement
-    let windowID: CGWindowID?
     let frame: CGRect
     let screenFrame: CGRect
 }
@@ -85,13 +84,11 @@ extension AccessibilityWindow {
         }
 
         let title: String = copyValue(attribute: kAXTitleAttribute as CFString, from: element) ?? appName
-        let windowNumber: NSNumber? = copyValue(attribute: "AXWindowNumber" as CFString, from: element)
         return AccessibilityWindow(
             id: "\(pid)-\(title)-\(Int(frame.origin.x))-\(Int(frame.origin.y))",
             appName: appName,
             title: title.isEmpty ? appName : title,
             element: element,
-            windowID: windowNumber.map { CGWindowID(truncating: $0) },
             frame: frame,
             screenFrame: screen.visibleFrame
         )
