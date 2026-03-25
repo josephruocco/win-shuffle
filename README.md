@@ -16,6 +16,10 @@ swift run
 
 Grant Accessibility permission to the built app when macOS prompts you.
 
+## Xcode
+
+Open `WinShuffle.xcodeproj` in Xcode if you want a normal app target, code signing, and Run support from the IDE.
+
 ## Notes
 
 - Full-screen and minimized windows are skipped.
