@@ -7,19 +7,24 @@ final class WindowShuffleCoordinator: ObservableObject {
     @Published var status = "Grant Accessibility access to start moving windows."
     @Published var hasAccessibilityAccess = false
     @Published var isAnimating = false
+    @Published var lastRefresh = Date.now
 
     private let animationDuration: Double = 1.35
     private let frameCount = 42
+    private var refreshTimer: Timer?
+    private var workspaceObservers: [NSObjectProtocol] = []
 
     func refreshWindows() {
         hasAccessibilityAccess = checkAccessibility(prompt: false)
         guard hasAccessibilityAccess else {
             status = "Accessibility access is required before windows can be shuffled."
             windows = []
+            lastRefresh = .now
             return
         }
 
         windows = AccessibilityWindow.loadMovableWindows(excluding: Bundle.main.bundleIdentifier)
+        lastRefresh = .now
         status = windows.isEmpty
             ? "No movable windows found."
             : "Ready to shuffle \(windows.count) window\(windows.count == 1 ? "" : "s")."
@@ -33,6 +38,47 @@ final class WindowShuffleCoordinator: ObservableObject {
         if hasAccessibilityAccess {
             refreshWindows()
         }
+    }
+
+    func startMonitoring() {
+        stopMonitoring()
+        refreshWindows()
+
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, !self.isAnimating else {
+                    return
+                }
+                self.refreshWindows()
+            }
+        }
+
+        let center = NSWorkspace.shared.notificationCenter
+        let names: [NSNotification.Name] = [
+            NSWorkspace.didActivateApplicationNotification,
+            NSWorkspace.didLaunchApplicationNotification,
+            NSWorkspace.didTerminateApplicationNotification
+        ]
+
+        workspaceObservers = names.map { name in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, !self.isAnimating else {
+                        return
+                    }
+                    self.refreshWindows()
+                }
+            }
+        }
+    }
+
+    func stopMonitoring() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+
+        let center = NSWorkspace.shared.notificationCenter
+        workspaceObservers.forEach { center.removeObserver($0) }
+        workspaceObservers.removeAll()
     }
 
     func shuffle() {

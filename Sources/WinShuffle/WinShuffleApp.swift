@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct WinShuffleApp: App {
     @StateObject private var coordinator = WindowShuffleCoordinator()
+    @State private var hotKeyMonitor = GlobalHotKeyMonitor()
 
     var body: some Scene {
         WindowGroup {
@@ -10,7 +11,14 @@ struct WinShuffleApp: App {
                 .environmentObject(coordinator)
                 .frame(minWidth: 420, minHeight: 420)
                 .onAppear {
-                    coordinator.refreshWindows()
+                    coordinator.startMonitoring()
+                    hotKeyMonitor.install {
+                        coordinator.shuffle()
+                    }
+                }
+                .onDisappear {
+                    coordinator.stopMonitoring()
+                    hotKeyMonitor.uninstall()
                 }
         }
         .windowResizability(.contentSize)
@@ -28,6 +36,18 @@ private struct ContentView: View {
             Text("Shuffle open macOS windows like a deck of cards.")
                 .font(.headline)
                 .foregroundStyle(.secondary)
+
+            HStack(spacing: 16) {
+                Label("Global hotkey", systemImage: "keyboard")
+                    .font(.subheadline.weight(.semibold))
+                Text("Option + Shift + S")
+                    .font(.subheadline.monospaced())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("Updated \(coordinator.lastRefresh.formatted(date: .omitted, time: .standard))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             HStack(spacing: 12) {
                 Button("Grant Access") {
@@ -56,7 +76,7 @@ private struct ContentView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("No windows loaded")
                         .font(.title3.weight(.semibold))
-                    Text("Open a few standard app windows, grant Accessibility access, then refresh.")
+                    Text("Open a few standard app windows, grant Accessibility access, then wait for auto-refresh or use Option + Shift + S.")
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
