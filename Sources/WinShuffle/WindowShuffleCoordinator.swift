@@ -105,8 +105,17 @@ final class WindowShuffleCoordinator: ObservableObject {
 
         let windows = windows
         let sourceFrames = windows.map(\.frame)
-        let targetOrigins = makeShuffledOrigins(for: windows, intensity: settings.intensityScale)
-        let deckAnchors = makeDeckAnchors(for: windows, intensity: settings.intensityScale)
+        let motion = settings.selectedPreset.motion
+        let targetOrigins = makeShuffledOrigins(
+            for: windows,
+            intensity: settings.intensityScale,
+            motion: motion
+        )
+        let deckAnchors = makeDeckAnchors(
+            for: windows,
+            intensity: settings.intensityScale,
+            motion: motion
+        )
         let duration = settings.animationDuration
 
         Task {
@@ -134,7 +143,8 @@ final class WindowShuffleCoordinator: ObservableObject {
                         start: sourceFrames[index].origin,
                         deckAnchor: deckAnchors[index],
                         target: targetOrigins[index],
-                        intensity: settings.intensityScale
+                        intensity: settings.intensityScale,
+                        motion: motion
                     )
                     AccessibilityWindow.setPosition(origin, for: window.element)
                 }
@@ -151,13 +161,17 @@ final class WindowShuffleCoordinator: ObservableObject {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    private func makeShuffledOrigins(for windows: [AccessibilityWindow], intensity: Double) -> [CGPoint] {
+    private func makeShuffledOrigins(
+        for windows: [AccessibilityWindow],
+        intensity: Double,
+        motion: ShuffleMotionProfile
+    ) -> [CGPoint] {
         let origins = windows.map(\.frame.origin).shuffled()
 
         return windows.enumerated().map { index, window in
             let candidate = origins[index]
-            let spreadX = CGFloat((index % 5) - 2) * (26 * intensity)
-            let spreadY = CGFloat(index % 4) * (-18 * intensity)
+            let spreadX = CGFloat((index % 5) - 2) * (motion.targetScatter.width * intensity)
+            let spreadY = CGFloat(index % 4) * (motion.targetScatter.height * intensity)
             return clampedOrigin(
                 for: window,
                 proposed: CGPoint(x: candidate.x + spreadX, y: candidate.y + spreadY)
@@ -165,16 +179,20 @@ final class WindowShuffleCoordinator: ObservableObject {
         }
     }
 
-    private func makeDeckAnchors(for windows: [AccessibilityWindow], intensity: Double) -> [CGPoint] {
+    private func makeDeckAnchors(
+        for windows: [AccessibilityWindow],
+        intensity: Double,
+        motion: ShuffleMotionProfile
+    ) -> [CGPoint] {
         let visible = NSScreen.main?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? .zero
         let deckCenter = CGPoint(
-            x: visible.midX - (180 * intensity),
-            y: visible.midY - (110 * intensity)
+            x: visible.midX + (motion.deckOffset.x * intensity),
+            y: visible.midY + (motion.deckOffset.y * intensity)
         )
 
         return windows.enumerated().map { index, window in
-            let fanX = CGFloat(index) * (18 * intensity)
-            let fanY = CGFloat(index % 2 == 0 ? -index : index) * (5 * intensity)
+            let fanX = CGFloat(index) * (motion.fanStep.width * intensity)
+            let fanY = CGFloat(index % 2 == 0 ? -index : index) * (motion.fanStep.height * intensity)
             return clampedOrigin(
                 for: window,
                 proposed: CGPoint(
@@ -224,13 +242,14 @@ final class WindowShuffleCoordinator: ObservableObject {
         start: CGPoint,
         deckAnchor: CGPoint,
         target: CGPoint,
-        intensity: Double
+        intensity: Double,
+        motion: ShuffleMotionProfile
     ) -> CGPoint {
         switch phase {
         case .gather(let amount):
             let stackOffset = CGPoint(
-                x: CGFloat(index) * (8 * intensity),
-                y: CGFloat(index % 3) * (-6 * intensity)
+                x: CGFloat(index) * (motion.gatherStackStep.width * intensity),
+                y: CGFloat(index % 3) * (motion.gatherStackStep.height * intensity)
             )
             return interpolate(
                 from: start,
@@ -240,21 +259,21 @@ final class WindowShuffleCoordinator: ObservableObject {
 
         case .fan(let amount):
             let fanOffset = CGPoint(
-                x: CGFloat(index) * (28 * intensity),
-                y: CGFloat(index % 2 == 0 ? -index : index) * (9 * intensity)
+                x: CGFloat(index) * (motion.fanStep.width * intensity),
+                y: CGFloat(index % 2 == 0 ? -index : index) * (motion.fanStep.height * intensity)
             )
             let base = CGPoint(x: deckAnchor.x + fanOffset.x, y: deckAnchor.y + fanOffset.y)
             let sweep = CGPoint(
-                x: cos((Double(index) * 0.45) + (amount * .pi)) * (18 * intensity),
-                y: sin((Double(index) * 0.35) + (amount * .pi * 1.1)) * (12 * intensity)
+                x: cos((Double(index) * 0.45) + (amount * .pi)) * (motion.fanSweep.width * intensity),
+                y: sin((Double(index) * 0.35) + (amount * .pi * 1.1)) * (motion.fanSweep.height * intensity)
             )
             return CGPoint(x: base.x + sweep.x, y: base.y + sweep.y)
 
         case .deal(let amount):
-            let stagger = min(max(amount - (Double(index) * 0.045), 0), 1)
+            let stagger = min(max(amount - (Double(index) * motion.dealStaggerStep), 0), 1)
             let eased = cubicEaseInOut(stagger)
-            let arcHeight = sin(eased * .pi) * ((42 + Double(index % 4) * 10) * intensity)
-            let drift = cos((eased * .pi * 2) + Double(index) * 0.5) * (12 * intensity)
+            let arcHeight = sin(eased * .pi) * ((motion.dealArcBase + Double(index % 4) * motion.dealArcBonus) * intensity)
+            let drift = cos((eased * .pi * 2) + Double(index) * 0.5) * (motion.dealDrift * intensity)
             let dealt = interpolate(from: deckAnchor, to: target, amount: eased)
             return CGPoint(x: dealt.x + drift, y: dealt.y + arcHeight)
         }

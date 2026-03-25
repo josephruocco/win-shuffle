@@ -158,13 +158,25 @@ struct ShufflePreset: Identifiable, Hashable {
     let summary: String
     let animationSpeed: Double
     let shuffleIntensity: Double
+    let motion: ShuffleMotionProfile
 
     static let subtle = ShufflePreset(
         id: "subtle",
         name: "Subtle",
         summary: "Cleaner motion with less spread and a softer tempo.",
         animationSpeed: 0.82,
-        shuffleIntensity: 0.55
+        shuffleIntensity: 0.55,
+        motion: ShuffleMotionProfile(
+            deckOffset: CGPoint(x: -120, y: -80),
+            gatherStackStep: CGSize(width: 5, height: -4),
+            fanStep: CGSize(width: 18, height: 5),
+            fanSweep: CGSize(width: 10, height: 8),
+            targetScatter: CGSize(width: 14, height: -10),
+            dealArcBase: 26,
+            dealArcBonus: 6,
+            dealDrift: 6,
+            dealStaggerStep: 0.035
+        )
     )
 
     static let casino = ShufflePreset(
@@ -172,7 +184,18 @@ struct ShufflePreset: Identifiable, Hashable {
         name: "Casino",
         summary: "Balanced fan-out with crisp pacing and visible dealing arcs.",
         animationSpeed: 1.12,
-        shuffleIntensity: 0.95
+        shuffleIntensity: 0.95,
+        motion: ShuffleMotionProfile(
+            deckOffset: CGPoint(x: -180, y: -110),
+            gatherStackStep: CGSize(width: 8, height: -6),
+            fanStep: CGSize(width: 28, height: 9),
+            fanSweep: CGSize(width: 18, height: 12),
+            targetScatter: CGSize(width: 26, height: -18),
+            dealArcBase: 42,
+            dealArcBonus: 10,
+            dealDrift: 12,
+            dealStaggerStep: 0.045
+        )
     )
 
     static let chaos = ShufflePreset(
@@ -180,6 +203,29 @@ struct ShufflePreset: Identifiable, Hashable {
         name: "Chaos",
         summary: "Fast, wide, and dramatic with exaggerated spread and lift.",
         animationSpeed: 1.65,
-        shuffleIntensity: 1.4
+        shuffleIntensity: 1.4,
+        motion: ShuffleMotionProfile(
+            deckOffset: CGPoint(x: -250, y: -150),
+            gatherStackStep: CGSize(width: 10, height: -8),
+            fanStep: CGSize(width: 38, height: 14),
+            fanSweep: CGSize(width: 26, height: 18),
+            targetScatter: CGSize(width: 40, height: -28),
+            dealArcBase: 64,
+            dealArcBonus: 16,
+            dealDrift: 18,
+            dealStaggerStep: 0.06
+        )
     )
+}
+
+struct ShuffleMotionProfile: Hashable {
+    let deckOffset: CGPoint
+    let gatherStackStep: CGSize
+    let fanStep: CGSize
+    let fanSweep: CGSize
+    let targetScatter: CGSize
+    let dealArcBase: Double
+    let dealArcBonus: Double
+    let dealDrift: Double
+    let dealStaggerStep: Double
 }
