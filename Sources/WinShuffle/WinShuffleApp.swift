@@ -2,14 +2,17 @@ import SwiftUI
 
 @main
 struct WinShuffleApp: App {
-    @StateObject private var settings = ShuffleSettings()
+    @NSApplicationDelegateAdaptor(WinShuffleAppDelegate.self) private var appDelegate
+    @StateObject private var settings: ShuffleSettings
     @StateObject private var coordinator: WindowShuffleCoordinator
-    @State private var hotKeyMonitor = GlobalHotKeyMonitor()
+    @StateObject private var runtime: AppRuntimeController
 
     init() {
         let settings = ShuffleSettings()
+        let coordinator = WindowShuffleCoordinator(settings: settings)
         _settings = StateObject(wrappedValue: settings)
-        _coordinator = StateObject(wrappedValue: WindowShuffleCoordinator(settings: settings))
+        _coordinator = StateObject(wrappedValue: coordinator)
+        _runtime = StateObject(wrappedValue: AppRuntimeController(coordinator: coordinator, settings: settings))
     }
 
     var body: some Scene {
@@ -18,20 +21,11 @@ struct WinShuffleApp: App {
                 .environmentObject(coordinator)
                 .environmentObject(settings)
                 .frame(minWidth: 420, minHeight: 420)
-                .onAppear {
-                    coordinator.startMonitoring()
-                    hotKeyMonitor.install(hotKey: settings.hotKey) {
-                        coordinator.shuffle()
-                    }
+                .task {
+                    runtime.activate()
                 }
-                .onDisappear {
-                    coordinator.stopMonitoring()
-                    hotKeyMonitor.uninstall()
-                }
-                .onChange(of: settings.hotKey) { _, hotKey in
-                    hotKeyMonitor.install(hotKey: hotKey) {
-                        coordinator.shuffle()
-                    }
+                .onChange(of: settings.hotKey) { _, _ in
+                    runtime.updateHotKey()
                 }
         }
         .windowResizability(.contentSize)
@@ -45,6 +39,9 @@ struct WinShuffleApp: App {
             MenuBarContentView()
                 .environmentObject(coordinator)
                 .environmentObject(settings)
+                .task {
+                    runtime.activate()
+                }
         }
     }
 }

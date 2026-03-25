@@ -13,6 +13,7 @@
 		A00000000000000000000013 /* WindowShuffleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000023 /* WindowShuffleCoordinator.swift */; };
 		A00000000000000000000014 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000024 /* PreferencesView.swift */; };
 		A00000000000000000000015 /* ShuffleSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000025 /* ShuffleSettings.swift */; };
+		A00000000000000000000017 /* AppRuntimeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000027 /* AppRuntimeController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		A00000000000000000000023 /* WindowShuffleCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowShuffleCoordinator.swift; sourceTree = "<group>"; };
 		A00000000000000000000024 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		A00000000000000000000025 /* ShuffleSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuffleSettings.swift; sourceTree = "<group>"; };
+		A00000000000000000000027 /* AppRuntimeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntimeController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +59,7 @@
 		A00000000000000000000042 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				A00000000000000000000027 /* AppRuntimeController.swift */,
 				A00000000000000000000020 /* AccessibilityWindow.swift */,
 				A00000000000000000000021 /* GlobalHotKeyMonitor.swift */,
 				A00000000000000000000024 /* PreferencesView.swift */,
@@ -148,6 +151,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000017 /* AppRuntimeController.swift in Sources */,
 				A00000000000000000000010 /* AccessibilityWindow.swift in Sources */,
 				A00000000000000000000011 /* GlobalHotKeyMonitor.swift in Sources */,
 				A00000000000000000000014 /* PreferencesView.swift in Sources */,
