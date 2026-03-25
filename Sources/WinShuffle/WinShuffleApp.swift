@@ -13,7 +13,7 @@ struct WinShuffleApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environmentObject(coordinator)
                 .environmentObject(settings)
@@ -38,6 +38,12 @@ struct WinShuffleApp: App {
 
         Settings {
             PreferencesView()
+                .environmentObject(settings)
+        }
+
+        MenuBarExtra("WinShuffle", systemImage: "rectangle.3.group.bubble") {
+            MenuBarContentView()
+                .environmentObject(coordinator)
                 .environmentObject(settings)
         }
     }
@@ -120,5 +126,60 @@ private struct ContentView: View {
             Spacer(minLength: 0)
         }
         .padding(24)
+    }
+}
+
+private struct MenuBarContentView: View {
+    @Environment(\.openWindow) private var openWindow
+    @EnvironmentObject private var coordinator: WindowShuffleCoordinator
+    @EnvironmentObject private var settings: ShuffleSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("WinShuffle")
+                .font(.headline)
+
+            Text(coordinator.status)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            Button("Shuffle Windows") {
+                coordinator.shuffle()
+            }
+            .disabled(!coordinator.hasAccessibilityAccess || coordinator.isAnimating)
+
+            Button("Refresh Windows") {
+                coordinator.refreshWindows()
+            }
+
+            Button("Open Main Window") {
+                openWindow(id: "main")
+            }
+
+            SettingsLink {
+                Text("Preferences")
+            }
+
+            Divider()
+
+            HStack {
+                Text("Hotkey")
+                Spacer()
+                Text(settings.hotKeyLabel)
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption)
+
+            Divider()
+
+            Button("Quit WinShuffle") {
+                NSApp.terminate(nil)
+            }
+        }
+        .padding(14)
+        .frame(width: 260)
     }
 }
