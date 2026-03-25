@@ -7,6 +7,9 @@ final class ShuffleSettings: ObservableObject {
     @Published var selectedPresetID: String {
         didSet { defaults.set(selectedPresetID, forKey: Keys.selectedPresetID) }
     }
+    @Published var selectedShapeID: String {
+        didSet { defaults.set(selectedShapeID, forKey: Keys.selectedShapeID) }
+    }
     @Published var hotKeyCode: UInt32 {
         didSet { defaults.set(Int(hotKeyCode), forKey: Keys.hotKeyCode) }
     }
@@ -28,12 +31,16 @@ final class ShuffleSettings: ObservableObject {
     @Published var shuffleIntensity: Double {
         didSet { defaults.set(shuffleIntensity, forKey: Keys.shuffleIntensity) }
     }
+    @Published var clusterRadiusScale: Double {
+        didSet { defaults.set(clusterRadiusScale, forKey: Keys.clusterRadiusScale) }
+    }
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         selectedPresetID = defaults.string(forKey: Keys.selectedPresetID) ?? ShufflePreset.casino.id
+        selectedShapeID = defaults.string(forKey: Keys.selectedShapeID) ?? ShuffleShape.circle.id
         hotKeyCode = UInt32(defaults.object(forKey: Keys.hotKeyCode) as? Int ?? Int(kVK_ANSI_S))
         useCommandModifier = defaults.object(forKey: Keys.useCommandModifier) as? Bool ?? false
         useOptionModifier = defaults.object(forKey: Keys.useOptionModifier) as? Bool ?? true
@@ -41,6 +48,7 @@ final class ShuffleSettings: ObservableObject {
         useControlModifier = defaults.object(forKey: Keys.useControlModifier) as? Bool ?? false
         animationSpeed = defaults.object(forKey: Keys.animationSpeed) as? Double ?? 1.0
         shuffleIntensity = defaults.object(forKey: Keys.shuffleIntensity) as? Double ?? 0.85
+        clusterRadiusScale = defaults.object(forKey: Keys.clusterRadiusScale) as? Double ?? 1.0
 
         if defaults.object(forKey: Keys.animationSpeed) == nil || defaults.object(forKey: Keys.shuffleIntensity) == nil {
             applyPreset(.casino)
@@ -73,12 +81,24 @@ final class ShuffleSettings: ObservableObject {
         max(0.2, shuffleIntensity)
     }
 
+    var clusterRadius: Double {
+        max(0.45, clusterRadiusScale)
+    }
+
     var presets: [ShufflePreset] {
         [.subtle, .casino, .chaos]
     }
 
     var selectedPreset: ShufflePreset {
         presets.first(where: { $0.id == selectedPresetID }) ?? .casino
+    }
+
+    var shapes: [ShuffleShape] {
+        [.circle, .fan, .stack, .scatter]
+    }
+
+    var selectedShape: ShuffleShape {
+        shapes.first(where: { $0.id == selectedShapeID }) ?? .circle
     }
 
     func applyPreset(_ preset: ShufflePreset) {
@@ -137,6 +157,7 @@ final class ShuffleSettings: ObservableObject {
 
     private enum Keys {
         static let selectedPresetID = "settings.selectedPresetID"
+        static let selectedShapeID = "settings.selectedShapeID"
         static let hotKeyCode = "settings.hotKeyCode"
         static let useCommandModifier = "settings.useCommandModifier"
         static let useOptionModifier = "settings.useOptionModifier"
@@ -144,6 +165,7 @@ final class ShuffleSettings: ObservableObject {
         static let useControlModifier = "settings.useControlModifier"
         static let animationSpeed = "settings.animationSpeed"
         static let shuffleIntensity = "settings.shuffleIntensity"
+        static let clusterRadiusScale = "settings.clusterRadiusScale"
     }
 }
 
@@ -228,4 +250,34 @@ struct ShuffleMotionProfile: Hashable {
     let dealArcBonus: Double
     let dealDrift: Double
     let dealStaggerStep: Double
+}
+
+struct ShuffleShape: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let summary: String
+
+    static let circle = ShuffleShape(
+        id: "circle",
+        name: "Circle",
+        summary: "A centered orbit with even spacing around the middle."
+    )
+
+    static let fan = ShuffleShape(
+        id: "fan",
+        name: "Fan",
+        summary: "A centered spread like cards opened across the desk."
+    )
+
+    static let stack = ShuffleShape(
+        id: "stack",
+        name: "Stack",
+        summary: "A tight centered pile with slight offsets between windows."
+    )
+
+    static let scatter = ShuffleShape(
+        id: "scatter",
+        name: "Scatter",
+        summary: "A looser centered cluster with more randomness."
+    )
 }

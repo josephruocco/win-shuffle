@@ -24,6 +24,29 @@ struct PreferencesView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Layout") {
+                Picker("Shape", selection: $settings.selectedShapeID) {
+                    ForEach(settings.shapes) { shape in
+                        Text(shape.name).tag(shape.id)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text(settings.selectedShape.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Cluster Radius")
+                        Spacer()
+                        Text("\(Int(settings.clusterRadiusScale * 100))%")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $settings.clusterRadiusScale, in: 0.55...1.7, step: 0.05)
+                }
+            }
+
             Section("Hotkey") {
                 Picker("Key", selection: $settings.hotKeyCode) {
                     ForEach(settings.hotKeyChoices) { choice in

@@ -84,6 +84,11 @@ private struct ContentView: View {
                     coordinator.refreshWindows()
                 }
 
+                Button("Restore") {
+                    coordinator.restore()
+                }
+                .disabled(!coordinator.canRestore || coordinator.isAnimating)
+
                 Button("Shuffle Windows") {
                     coordinator.shuffle()
                 }
@@ -147,6 +152,11 @@ private struct MenuBarContentView: View {
                 coordinator.shuffle()
             }
             .disabled(!coordinator.hasAccessibilityAccess || coordinator.isAnimating)
+
+            Button("Restore Windows") {
+                coordinator.restore()
+            }
+            .disabled(!coordinator.canRestore || coordinator.isAnimating)
 
             Button("Refresh Windows") {
                 coordinator.refreshWindows()
