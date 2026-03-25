@@ -6,10 +6,12 @@ final class GlobalHotKeyMonitor {
     private var eventHandler: EventHandlerRef?
     private let hotKeyID = EventHotKeyID(signature: fourCharCode("WSHF"), id: 1)
     fileprivate var handler: (@MainActor () -> Void)?
+    private var currentHotKey: HotKey?
 
-    func install(handler: @escaping @MainActor () -> Void) {
+    func install(hotKey: HotKey, handler: @escaping @MainActor () -> Void) {
         uninstall()
         self.handler = handler
+        currentHotKey = hotKey
 
         var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(
@@ -22,8 +24,8 @@ final class GlobalHotKeyMonitor {
         )
 
         RegisterEventHotKey(
-            UInt32(kVK_ANSI_S),
-            UInt32(optionKey | shiftKey),
+            hotKey.keyCode,
+            hotKey.modifiers,
             hotKeyID,
             GetApplicationEventTarget(),
             0,
@@ -33,6 +35,7 @@ final class GlobalHotKeyMonitor {
 
     func uninstall() {
         handler = nil
+        currentHotKey = nil
 
         if let hotKeyRef {
             UnregisterEventHotKey(hotKeyRef)

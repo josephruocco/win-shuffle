@@ -2,17 +2,25 @@ import SwiftUI
 
 @main
 struct WinShuffleApp: App {
-    @StateObject private var coordinator = WindowShuffleCoordinator()
+    @StateObject private var settings = ShuffleSettings()
+    @StateObject private var coordinator: WindowShuffleCoordinator
     @State private var hotKeyMonitor = GlobalHotKeyMonitor()
+
+    init() {
+        let settings = ShuffleSettings()
+        _settings = StateObject(wrappedValue: settings)
+        _coordinator = StateObject(wrappedValue: WindowShuffleCoordinator(settings: settings))
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(coordinator)
+                .environmentObject(settings)
                 .frame(minWidth: 420, minHeight: 420)
                 .onAppear {
                     coordinator.startMonitoring()
-                    hotKeyMonitor.install {
+                    hotKeyMonitor.install(hotKey: settings.hotKey) {
                         coordinator.shuffle()
                     }
                 }
@@ -20,13 +28,24 @@ struct WinShuffleApp: App {
                     coordinator.stopMonitoring()
                     hotKeyMonitor.uninstall()
                 }
+                .onChange(of: settings.hotKey) { _, hotKey in
+                    hotKeyMonitor.install(hotKey: hotKey) {
+                        coordinator.shuffle()
+                    }
+                }
         }
         .windowResizability(.contentSize)
+
+        Settings {
+            PreferencesView()
+                .environmentObject(settings)
+        }
     }
 }
 
 private struct ContentView: View {
     @EnvironmentObject private var coordinator: WindowShuffleCoordinator
+    @EnvironmentObject private var settings: ShuffleSettings
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -40,7 +59,7 @@ private struct ContentView: View {
             HStack(spacing: 16) {
                 Label("Global hotkey", systemImage: "keyboard")
                     .font(.subheadline.weight(.semibold))
-                Text("Option + Shift + S")
+                Text(settings.hotKeyLabel)
                     .font(.subheadline.monospaced())
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -52,6 +71,10 @@ private struct ContentView: View {
             HStack(spacing: 12) {
                 Button("Grant Access") {
                     coordinator.requestAccessibilityAccess()
+                }
+
+                Button("Preferences") {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                 }
 
                 Button("Refresh") {
@@ -76,7 +99,7 @@ private struct ContentView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("No windows loaded")
                         .font(.title3.weight(.semibold))
-                    Text("Open a few standard app windows, grant Accessibility access, then wait for auto-refresh or use Option + Shift + S.")
+                    Text("Open a few standard app windows, grant Accessibility access, then wait for auto-refresh or use \(settings.hotKeyLabel).")
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
