@@ -9,8 +9,8 @@ final class WindowShuffleCoordinator: ObservableObject {
     @Published var isAnimating = false
     @Published var lastRefresh = Date.now
 
-    private let animationDuration: Double = 1.35
-    private let frameCount = 42
+    private let animationDuration: Double = 1.8
+    private let frameCount = 60
     private var refreshTimer: Timer?
     private var workspaceObservers: [NSObjectProtocol] = []
 
@@ -98,8 +98,10 @@ final class WindowShuffleCoordinator: ObservableObject {
         isAnimating = true
         status = "Shuffling \(windows.count) windows."
 
+        let windows = windows
         let sourceFrames = windows.map(\.frame)
         let targetOrigins = makeShuffledOrigins(for: windows)
+        let deckAnchors = makeDeckAnchors(for: windows)
 
         Task {
             defer {
@@ -107,19 +109,26 @@ final class WindowShuffleCoordinator: ObservableObject {
                 refreshWindows()
             }
 
+            windows.enumerated().forEach { index, window in
+                AccessibilityWindow.raise(window.element)
+                if index < windows.count - 1 {
+                    _ = AXUIElementSetMessagingTimeout(window.element, 0.05)
+                }
+            }
+
             for frameIndex in 0...frameCount {
                 let t = Double(frameIndex) / Double(frameCount)
-                let eased = cubicEaseInOut(t)
+                let phase = shufflePhase(for: t)
 
                 for (index, window) in windows.enumerated() {
-                    let start = sourceFrames[index].origin
-                    let end = targetOrigins[index]
-                    let lift = sin(eased * .pi) * (18 + Double(index % 5) * 10)
-                    let drift = cos((eased + Double(index) * 0.11) * .pi * 2) * 10
-
-                    let x = start.x + ((end.x - start.x) * eased) + drift
-                    let y = start.y + ((end.y - start.y) * eased) + lift
-                    AccessibilityWindow.setPosition(CGPoint(x: x, y: y), for: window.element)
+                    let origin = animatedOrigin(
+                        at: phase,
+                        index: index,
+                        start: sourceFrames[index].origin,
+                        deckAnchor: deckAnchors[index],
+                        target: targetOrigins[index]
+                    )
+                    AccessibilityWindow.setPosition(origin, for: window.element)
                 }
 
                 try? await Task.sleep(for: .seconds(animationDuration / Double(frameCount)))
@@ -139,11 +148,31 @@ final class WindowShuffleCoordinator: ObservableObject {
 
         return windows.enumerated().map { index, window in
             let candidate = origins[index]
-            let spreadX = CGFloat((index % 4) - 1) * 18
-            let spreadY = CGFloat(index % 3) * -16
+            let spreadX = CGFloat((index % 5) - 2) * 26
+            let spreadY = CGFloat(index % 4) * -18
             return clampedOrigin(
                 for: window,
                 proposed: CGPoint(x: candidate.x + spreadX, y: candidate.y + spreadY)
+            )
+        }
+    }
+
+    private func makeDeckAnchors(for windows: [AccessibilityWindow]) -> [CGPoint] {
+        let visible = NSScreen.main?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? .zero
+        let deckCenter = CGPoint(
+            x: visible.midX - 180,
+            y: visible.midY - 110
+        )
+
+        return windows.enumerated().map { index, window in
+            let fanX = CGFloat(index) * 18
+            let fanY = CGFloat(index % 2 == 0 ? -index : index) * 5
+            return clampedOrigin(
+                for: window,
+                proposed: CGPoint(
+                    x: deckCenter.x + fanX,
+                    y: deckCenter.y + fanY
+                )
             )
         }
     }
@@ -168,4 +197,67 @@ final class WindowShuffleCoordinator: ObservableObject {
         let shifted = (-2 * t) + 2
         return 1 - pow(shifted, 3) / 2
     }
+
+    private func shufflePhase(for progress: Double) -> ShufflePhase {
+        if progress < 0.33 {
+            return .gather(cubicEaseInOut(progress / 0.33))
+        }
+
+        if progress < 0.56 {
+            return .fan(cubicEaseInOut((progress - 0.33) / 0.23))
+        }
+
+        return .deal(cubicEaseInOut((progress - 0.56) / 0.44))
+    }
+
+    private func animatedOrigin(
+        at phase: ShufflePhase,
+        index: Int,
+        start: CGPoint,
+        deckAnchor: CGPoint,
+        target: CGPoint
+    ) -> CGPoint {
+        switch phase {
+        case .gather(let amount):
+            let stackOffset = CGPoint(x: CGFloat(index) * 8, y: CGFloat(index % 3) * -6)
+            return interpolate(
+                from: start,
+                to: CGPoint(x: deckAnchor.x + stackOffset.x, y: deckAnchor.y + stackOffset.y),
+                amount: amount
+            )
+
+        case .fan(let amount):
+            let fanOffset = CGPoint(
+                x: CGFloat(index) * 28,
+                y: CGFloat(index % 2 == 0 ? -index : index) * 9
+            )
+            let base = CGPoint(x: deckAnchor.x + fanOffset.x, y: deckAnchor.y + fanOffset.y)
+            let sweep = CGPoint(
+                x: cos((Double(index) * 0.45) + (amount * .pi)) * 18,
+                y: sin((Double(index) * 0.35) + (amount * .pi * 1.1)) * 12
+            )
+            return CGPoint(x: base.x + sweep.x, y: base.y + sweep.y)
+
+        case .deal(let amount):
+            let stagger = min(max(amount - (Double(index) * 0.045), 0), 1)
+            let eased = cubicEaseInOut(stagger)
+            let arcHeight = sin(eased * .pi) * (42 + Double(index % 4) * 10)
+            let drift = cos((eased * .pi * 2) + Double(index) * 0.5) * 12
+            let dealt = interpolate(from: deckAnchor, to: target, amount: eased)
+            return CGPoint(x: dealt.x + drift, y: dealt.y + arcHeight)
+        }
+    }
+
+    private func interpolate(from: CGPoint, to: CGPoint, amount: Double) -> CGPoint {
+        CGPoint(
+            x: from.x + ((to.x - from.x) * amount),
+            y: from.y + ((to.y - from.y) * amount)
+        )
+    }
+}
+
+private enum ShufflePhase {
+    case gather(Double)
+    case fan(Double)
+    case deal(Double)
 }

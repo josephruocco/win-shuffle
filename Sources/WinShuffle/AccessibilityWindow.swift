@@ -114,6 +114,10 @@ extension AccessibilityWindow {
         AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, value)
     }
 
+    static func raise(_ element: AXUIElement) {
+        AXUIElementPerformAction(element, kAXRaiseAction as CFString)
+    }
+
     private static func copyValue<T>(attribute: CFString, from element: AXUIElement) -> T? {
         var rawValue: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(element, attribute, &rawValue)
