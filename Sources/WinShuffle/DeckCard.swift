@@ -40,6 +40,24 @@ struct DeckCard: Identifiable, Hashable {
         case jack = "J"
         case queen = "Q"
         case king = "K"
+
+        var value: Int {
+            switch self {
+            case .ace: return 1
+            case .two: return 2
+            case .three: return 3
+            case .four: return 4
+            case .five: return 5
+            case .six: return 6
+            case .seven: return 7
+            case .eight: return 8
+            case .nine: return 9
+            case .ten: return 10
+            case .jack: return 11
+            case .queen: return 12
+            case .king: return 13
+            }
+        }
     }
 
     let suit: Suit
@@ -55,6 +73,10 @@ struct DeckCard: Identifiable, Hashable {
 
     var suitLine: String {
         "\(rank.rawValue) OF \(suit.rawValue)"
+    }
+
+    var shortLabel: String {
+        "\(rank.rawValue)\(suit.pip)"
     }
 
     var accentHex: UInt32 {
