@@ -6,6 +6,7 @@ struct WinShuffleApp: App {
     @StateObject private var settings: ShuffleSettings
     @StateObject private var coordinator: WindowShuffleCoordinator
     @StateObject private var runtime: AppRuntimeController
+    @StateObject private var deckTable = DeckTableController()
 
     init() {
         let settings = ShuffleSettings()
@@ -20,6 +21,7 @@ struct WinShuffleApp: App {
             ContentView()
                 .environmentObject(coordinator)
                 .environmentObject(settings)
+                .environmentObject(deckTable)
                 .frame(minWidth: 420, minHeight: 420)
                 .task {
                     runtime.activate()
@@ -39,6 +41,7 @@ struct WinShuffleApp: App {
             MenuBarContentView()
                 .environmentObject(coordinator)
                 .environmentObject(settings)
+                .environmentObject(deckTable)
                 .task {
                     runtime.activate()
                 }
@@ -49,6 +52,7 @@ struct WinShuffleApp: App {
 private struct ContentView: View {
     @EnvironmentObject private var coordinator: WindowShuffleCoordinator
     @EnvironmentObject private var settings: ShuffleSettings
+    @EnvironmentObject private var deckTable: DeckTableController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -97,6 +101,36 @@ private struct ContentView: View {
                 .disabled(!coordinator.hasAccessibilityAccess || coordinator.isAnimating)
             }
 
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Card Table")
+                    .font(.headline)
+
+                HStack(spacing: 12) {
+                    Button("Create Deck") {
+                        deckTable.createDeck()
+                    }
+
+                    Button("Shuffle Deck") {
+                        deckTable.shuffleDeck()
+                    }
+                    .disabled(!deckTable.isPresented)
+
+                    Button("Reset Deck") {
+                        deckTable.resetLayout()
+                    }
+                    .disabled(!deckTable.isPresented)
+
+                    Button("Clear Deck") {
+                        deckTable.closeDeck()
+                    }
+                    .disabled(!deckTable.isPresented)
+                }
+
+                Text(deckTable.status)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
             Text(coordinator.status)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -135,6 +169,7 @@ private struct MenuBarContentView: View {
     @Environment(\.openWindow) private var openWindow
     @EnvironmentObject private var coordinator: WindowShuffleCoordinator
     @EnvironmentObject private var settings: ShuffleSettings
+    @EnvironmentObject private var deckTable: DeckTableController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -161,6 +196,27 @@ private struct MenuBarContentView: View {
             Button("Refresh Windows") {
                 coordinator.refreshWindows()
             }
+
+            Divider()
+
+            Button("Create Deck Table") {
+                deckTable.createDeck()
+            }
+
+            Button("Shuffle Deck Table") {
+                deckTable.shuffleDeck()
+            }
+            .disabled(!deckTable.isPresented)
+
+            Button("Reset Deck Table") {
+                deckTable.resetLayout()
+            }
+            .disabled(!deckTable.isPresented)
+
+            Button("Clear Deck Table") {
+                deckTable.closeDeck()
+            }
+            .disabled(!deckTable.isPresented)
 
             Button("Open Main Window") {
                 openWindow(id: "main")
