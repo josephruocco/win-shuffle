@@ -513,7 +513,7 @@ private struct TerminalCardView: View {
                 trafficLight(Color(red: 1, green: 0.74, blue: 0.18))
                 trafficLight(Color(red: 0.16, green: 0.79, blue: 0.34))
                 Spacer()
-                Text(state.card.terminalTitle)
+                Text(headerTitle)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(0.65))
             }
@@ -547,114 +547,43 @@ private struct TerminalCardView: View {
         }
     }
 
+    private var headerTitle: String {
+        "deck://card"
+    }
+
     private var faceUpBody: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.99, green: 0.98, blue: 0.95),
-                            Color(red: 0.95, green: 0.93, blue: 0.89)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            VStack(spacing: 0) {
-                HStack(alignment: .top) {
-                    cardCorner(alignment: .leading)
-                    Spacer(minLength: 0)
-                    suitBadge
-                }
-
-                Spacer(minLength: 6)
-
-                VStack(spacing: 6) {
-                    Text(state.card.suit.pip)
-                        .font(.system(size: 56, weight: .regular, design: .serif))
-                    Text(state.card.suitLine)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .tracking(1.1)
-                }
-                .foregroundStyle(cardInk)
-
-                Spacer(minLength: 6)
-
-                HStack(alignment: .bottom) {
-                    Spacer(minLength: 0)
-                    cardCorner(alignment: .trailing)
-                }
-            }
-            .padding(14)
+                .fill(Color(red: 0.94, green: 0.92, blue: 0.84))
 
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(cardInk.opacity(0.16), lineWidth: 1)
+                .stroke(cardInk.opacity(0.24), lineWidth: 1)
 
-            VStack {
-                Spacer()
-                HStack {
-                    Text("drag")
-                    Spacer()
-                    Text("dbl-click flip")
-                }
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .foregroundStyle(cardInk.opacity(0.45))
-                .padding(.horizontal, 14)
-                .padding(.bottom, 10)
-            }
+            Text(faceUpText)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(cardInk)
+                .multilineTextAlignment(.leading)
+                .lineSpacing(2)
+                .padding(12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 
     private var faceDownBody: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.19, green: 0.23, blue: 0.38),
-                            Color(red: 0.11, green: 0.14, blue: 0.25)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(Color(red: 0.11, green: 0.16, blue: 0.11))
 
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                .stroke(Color(red: 0.42, green: 0.91, blue: 0.46).opacity(0.35), lineWidth: 1)
 
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                .padding(10)
-
-            VStack(spacing: 10) {
-                Text("WS")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.92))
-                Text("DOUBLE-CLICK TO FLIP")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .tracking(1.2)
-                    .foregroundStyle(Color.white.opacity(0.6))
-            }
-
-            deckBackPattern
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-    }
-
-    private var deckBackPattern: some View {
-        GeometryReader { geometry in
-            let width = geometry.size.width
-            let height = geometry.size.height
-            Path { path in
-                var x: CGFloat = -height
-                while x < width {
-                    path.move(to: CGPoint(x: x, y: 0))
-                    path.addLine(to: CGPoint(x: x + height, y: height))
-                    x += 18
-                }
-            }
-            .stroke(Color.white.opacity(0.06), lineWidth: 6)
+            Text(faceDownText)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color(red: 0.42, green: 0.91, blue: 0.46))
+                .multilineTextAlignment(.leading)
+                .lineSpacing(2)
+                .padding(12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 
@@ -667,27 +596,55 @@ private struct TerminalCardView: View {
         }
     }
 
-    private var suitBadge: some View {
-        Text(state.card.suit.rawValue.capitalized)
-            .font(.system(size: 9, weight: .bold, design: .rounded))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(cardInk.opacity(0.12))
-            .clipShape(Capsule())
-            .foregroundStyle(cardInk)
+    private var faceUpText: String {
+        let rank = state.card.rank.rawValue
+        let pip = state.card.suit.pip
+        let suitName = state.card.suit.rawValue
+        let top = "\(rank) \(pip)"
+        let bottom = "\(pip) \(rank)"
+        return """
+        +------------------+
+        |\(padRight(top, to: 18))|
+        |\(padRight(suitName, to: 18))|
+        |                  |
+        |       \(padCenter(pip, to: 4))       |
+        |      \(padCenter(rank, to: 6))      |
+        |   DOUBLE-CLICK =   |
+        |   FLIP / DRAG OK   |
+        |                  |
+        |\(padLeft(bottom, to: 18))|
+        +------------------+
+        """
     }
 
-    @ViewBuilder
-    private func cardCorner(alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: -2) {
-            Text(state.card.rank.rawValue)
-                .font(.system(size: 22, weight: .black, design: .serif))
-            Text(state.card.suit.pip)
-                .font(.system(size: 20, weight: .regular, design: .serif))
-        }
-        .foregroundStyle(cardInk)
-        .frame(width: 28)
-        .rotationEffect(alignment == .leading ? .zero : .degrees(180))
+    private var faceDownText: String {
+        """
+        +------------------+
+        |##################|
+        |## WINSHUFFLE ###|
+        |##################|
+        |## RETRO DECK ###|
+        |## FACE   DOWN ##|
+        |## SELECT + FLIP#|
+        |## STACK READY ##|
+        |##################|
+        +------------------+
+        """
+    }
+
+    private func padLeft(_ value: String, to width: Int) -> String {
+        String(repeating: " ", count: max(width - value.count, 0)) + value
+    }
+
+    private func padRight(_ value: String, to width: Int) -> String {
+        value + String(repeating: " ", count: max(width - value.count, 0))
+    }
+
+    private func padCenter(_ value: String, to width: Int) -> String {
+        let totalPadding = max(width - value.count, 0)
+        let leading = totalPadding / 2
+        let trailing = totalPadding - leading
+        return String(repeating: " ", count: leading) + value + String(repeating: " ", count: trailing)
     }
 
     private func trafficLight(_ color: Color) -> some View {
